@@ -23,11 +23,7 @@ contract Adoption {
   
   /* Valor minimo de um pet */
   uint min_preco = 2;
-  
-  /*function Adoption() public {
-      owner = msg.sender;
-  }*/
-  
+
   constructor() public {
       owner = msg.sender;
   }
@@ -39,7 +35,7 @@ contract Adoption {
 
 	  pets.push(newPet);
 	
-	return pets.length - 1;
+      return pets.length - 1;
   }
   
   function getAddr() public view returns (address) {
@@ -47,6 +43,8 @@ contract Adoption {
   }
   
   function setValorMinPreco(uint _min_preco) public returns (uint) {
+      require(owner == msg.sender) ;
+            
       min_preco = _min_preco;
       
       return min_preco;
@@ -69,17 +67,6 @@ contract Adoption {
 	{
 		return (pets[petId].name, pets[petId].adopter);
 	}
-
-   /*function adopt(uint petId)
-	validPet(petId)
-	public
-	returns(uint)
-	{
-		Pet storage pet = pets[petId];
-		pet.adopter = msg.sender ;
-		pets[petId] = pet;
-		return petId;
-	}*/
 
    function adopt(uint petId, uint value)
 	validPet(petId)
@@ -107,5 +94,13 @@ contract Adoption {
 		    
 		    return petId;
 		}
+	}
+	
+	/* Destroi o contrato e envia o balanco de ethers para o dono */
+	function killPetshop() public {
+	    require(owner == msg.sender);
+	    
+        selfdestruct(owner);
+        
 	}
 }
