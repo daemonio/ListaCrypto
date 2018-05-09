@@ -1,11 +1,16 @@
 pragma solidity ^0.4.17;
 
-/* TODO: Final do contrato enviar ether pra sua conta */
+/*
+    Lista solidity
+    Aluno: Marcos Paulo Ferreira
+*/
 
 contract Adoption {
     
-  event PetComprado(address comprador, uint valor);
-  event PetReembolso(address comprator, uint valor);
+  event PetComprado(uint idCompra, string nome, address comprador, uint valor);
+  //event RemovendoCompra(uint idCompra, address comprador, uint valor) ;
+  event PetJaComDono(uint petId, address comprador_original, address comprador_negado);
+  event Reembolso(address comprador, uint valor);
 
   enum STATUSPET {A_VENDA, VENDIDO}
   STATUSPET statuspet;
@@ -13,25 +18,32 @@ contract Adoption {
   address owner;
   
   struct Pet {
-	bytes name;
+	string name;
 	address adopter;
 	uint preco;
 	STATUSPET _status;
   }
+  
+  struct Comprador {
+      /* endereço */
+      address endereco;
+      /* valor recebido */
+      uint valor;
+  }
+  
+  /* mapeia id de um pet a uma lista de compradores */
+  mapping(uint => Comprador[]) compras;
 
   Pet[] public pets;
   
-  /* Valor minimo de um pet */
-  uint min_preco = 2;
-
   constructor() public {
       owner = msg.sender;
   }
 
-  function addPet(bytes name) public returns (uint) {
+  function addPet(string name) public returns (uint) {
       require(owner == msg.sender) ;
 	  
-	  Pet memory newPet = Pet(name, address(0), min_preco, STATUSPET.A_VENDA);
+	  Pet memory newPet = Pet(name, address(0), 0, STATUSPET.A_VENDA);
 
 	  pets.push(newPet);
 	
@@ -42,65 +54,138 @@ contract Adoption {
       return owner;
   }
   
-  function setValorMinPreco(uint _min_preco) public returns (uint) {
-      require(owner == msg.sender) ;
-            
-      min_preco = _min_preco;
-      
-      return min_preco;
-  }
-
-  function getNumberOfPets() public view returns (uint) {
+  function getNumberOfPets() public view returns (uint)
+  {
 	return pets.length;
   }
 
-  modifier validPet(uint petId) {
+  modifier validPet(uint petId)
+  {
 	require(petId >= 0 && petId < pets.length) ;
 	_;
+  }
+  
+  modifier validCompra(uint petId, uint index)
+  {
+      require(petId >= 0 && petId < pets.length) ;
+      require(index >= 0 && index < compras[petId].length);
+      _;
+  }
+  
+  function getCompraMaisCaraPet(uint petId)
+  public
+  view
+  returns(uint, uint)
+  {
+      uint maior_indice = 0;
+      uint maior_valor = 0;
+      for(uint index = 0; index < compras[petId].length; index++)
+      {
+          if (maior_valor < compras[petId][index].valor)
+          {
+              maior_valor = compras[petId][index].valor;
+              maior_indice = index;
+          }
+       }
+      
+      return (maior_indice, maior_valor);
   }
 
   function getPet(uint petId)
 	validPet(petId)
 	public
 	view
-	returns(bytes, address)
+	returns(string, address, uint, STATUSPET)
 	{
-		return (pets[petId].name, pets[petId].adopter);
+		return (pets[petId].name, pets[petId].adopter, pets[petId].preco, pets[petId]._status);
 	}
-
+	
+   /* Funcao de adocao. Aceita o id do pet e o valor */
    function adopt(uint petId, uint value)
 	validPet(petId)
 	public
 	payable
-	returns(uint)
+	returns(address, uint)
 	{
 	    require(value == msg.value);
-	    require(value > min_preco);
 
 		Pet storage pet = pets[petId];
-		
-		/* Devolve dinheiro. TODO: caso de erro */
-		if(pet._status == STATUSPET.VENDIDO) {
-		    msg.sender.transfer(value);
+
+		if(pet._status == STATUSPET.A_VENDA) {
+	        Comprador memory c = Comprador(msg.sender, msg.value) ;
+	        
+	        c.endereco = msg.sender;
+	        c.valor = msg.value;
+
+		    compras[petId].push(c);
 		    
-		    emit PetReembolso(msg.sender, value);
-		} else {
-			pet.adopter = msg.sender ;
-			pet._status = STATUSPET.VENDIDO;
-			pet.preco = msg.value;
-		    pets[petId] = pet;
-		    
-		    emit PetComprado(msg.sender, value) ;
-		    
-		    return petId;
+		    return (c.endereco, c.valor);
+		} else { /* Pet ja vendido mas recebeu proposta de compra */
+		    emit PetJaComDono(petId, pets[petId].adopter, msg.sender) ;
 		}
+		
+		/* retorno para fins de Debug */
+		return (address(0), 0);
+	}
+
+    /* Chamado pelo dono do contrato. Finaliza a compra de um Pet */
+	function aceitaCompraPet(uint petId, uint index)
+	validCompra(petId, index)
+	public
+	{
+	    require(owner == msg.sender);
+	    
+	    address endereco;
+	    uint valor;
+	
+	    /* Remove a compra e devolve o dinheiro */
+	    for(uint i=0; i < compras[petId].length; i++)
+	    {
+	        if(i != index ) {
+	            endereco = compras[petId][i].endereco;
+	            valor    = compras[petId][i].valor;
+	            
+	            //emit RemovendoCompra(i, endereco, valor);
+	            
+	            emit Reembolso(endereco, valor);
+	            endereco.transfer(valor);
+	        }
+	    }
+	    
+	    pets[petId]._status = STATUSPET.VENDIDO;
+	    pets[petId].adopter = compras[petId][index].endereco;
+	    pets[petId].preco = compras[petId][index].valor;
+	    
+	    emit PetComprado(index, pets[petId].name, pets[petId].adopter, pets[petId].preco) ;
+	    
+	    delete compras[petId];
+	}
+
+    /* Total de pedidos de um Pet */
+	function getTotalComprasByPet(uint petId)
+	public
+	view
+	returns(uint)
+	{
+	    return compras[petId].length;
+	}
+	
+	/* Obtem uma compra/pedido. Exemplo: pedido 1 do pet 0, logo parametro: (0, 1) */
+	function getCompraPet(uint petId, uint index)
+	validCompra(petId, index)
+	public
+	view
+	returns(address, uint)
+	{
+	    return (compras[petId][index].endereco, compras[petId][index].valor);
 	}
 	
 	/* Destroi o contrato e envia o balanco de ethers para o dono */
-	function killPetshop() public {
+	function killPetshop()
+	public
+	{
 	    require(owner == msg.sender);
 	    
         selfdestruct(owner);
-        
 	}
 }
