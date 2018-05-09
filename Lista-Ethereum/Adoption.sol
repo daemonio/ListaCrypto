@@ -15,7 +15,7 @@ contract Adoption {
   enum STATUSPET {A_VENDA, VENDIDO}
   STATUSPET statuspet;
   
-  address owner;
+  address public owner;
   
   struct Pet {
 	string name;
@@ -30,7 +30,7 @@ contract Adoption {
       /* valor recebido */
       uint valor;
   }
-  
+
   /* mapeia id de um pet a uma lista de compradores */
   mapping(uint => Comprador[]) compras;
 
@@ -49,11 +49,7 @@ contract Adoption {
 	
       return pets.length - 1;
   }
-  
-  function getAddr() public view returns (address) {
-      return owner;
-  }
-  
+
   function getNumberOfPets() public view returns (uint)
   {
 	return pets.length;
@@ -87,8 +83,18 @@ contract Adoption {
               maior_indice = index;
           }
        }
-      
+       
       return (maior_indice, maior_valor);
+  }
+  
+  function getPetStatus(uint petId)
+  validPet(petId)
+  public
+  view
+  returns(string)
+  {
+      if(pets[petId]._status == STATUSPET.VENDIDO) return "vendido";
+      else return "disponivel";
   }
 
   function getPet(uint petId)
@@ -108,7 +114,7 @@ contract Adoption {
 	returns(address, uint)
 	{
 	    require(value == msg.value);
-
+	    
 		Pet storage pet = pets[petId];
 
 		if(pet._status == STATUSPET.A_VENDA) {
@@ -134,7 +140,7 @@ contract Adoption {
 	public
 	{
 	    require(owner == msg.sender);
-	    
+
 	    address endereco;
 	    uint valor;
 	
@@ -148,7 +154,13 @@ contract Adoption {
 	            //emit RemovendoCompra(i, endereco, valor);
 	            
 	            emit Reembolso(endereco, valor);
-	            endereco.transfer(valor);
+	            /* TODO: Verificar metodo melhor pra evitar reentrancy */
+	            if(valor > 0)
+	            {
+	                endereco.transfer(valor);
+	                /* Evita reenvio por reentrada */
+	                compras[petId][i].valor = 0;
+	            }
 	        }
 	    }
 	    
