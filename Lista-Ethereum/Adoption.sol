@@ -120,9 +120,6 @@ contract Adoption {
 		if(pet._status == STATUSPET.A_VENDA) {
 	        Comprador memory c = Comprador(msg.sender, msg.value) ;
 	        
-	        c.endereco = msg.sender;
-	        c.valor = msg.value;
-
 		    compras[petId].push(c);
 		    
 		    return (c.endereco, c.valor);
