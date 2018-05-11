@@ -1,0 +1,13 @@
+1) Download do ganache
+2) Download do nvm (tudo localhost)
+    https://github.com/creationix/nvm
+    curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.33.11/install.sh | bash
+    command -v nvm
+    bash
+
+3) Instale o MetaMask e use a MESMA SEED do Ganache
+
+4) rode
+   npm install lite-server
+   Entre na pasta do pet-shop (migrations?) e execute:
+   npm run dev
