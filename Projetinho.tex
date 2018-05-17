@@ -9,7 +9,7 @@
 \begin{document}
 
 \title{%
-  Compartilhamento de Internet Wi-fi com pagamento em IOTA \\
+  Compartilhamento de Internet Wifi com pagamento em IOTA \\
   \large Blockchains, Criptomoedas e Outras Aplicações}
     
 \author{Marcos Paulo Ferreira}
@@ -17,9 +17,9 @@
 \maketitle
 
 \begin{abstract}
-Nesse trabalho desenvolveremos um sistema de conexão Wi-fi em que um dispositivo primeiro realiza
+Nesse trabalho desenvolveremos um sistema de conexão Wifi em que um dispositivo primeiro realiza
 o pagamento para a utilização através da moeda IOTA. Dessa maneira, um celular ao detectar uma rede
-Wi-fi disponível terá que pagar uma quantidade de moeda para o roteador para se conectar ao ponto de acesso.
+Wifi disponível terá que pagar uma quantidade de moeda para o roteador para se conectar ao ponto de acesso.
 \end{abstract}
 
 
@@ -34,21 +34,52 @@ pass
 
 O objetivo é mostrar a eficiência e flexibilidade da moeda IOTA como meio de pagamento de serviços em uma economia
 machine-to-machine. Será desenvolvido um pequeno aplicativo web que permite que um dispositivo cliente, como um
-celular, se comunique com um roteador fornecedor de Internet por rede sem-fio. Inicialmente será proposto
-um simples esquema de comunicação por interface Web, mas a ideia do trabalho pode ser generalizada para implementações
-até mesmo em hardware.
+celular, obtenha o endereço IOTA do roteador fornecedor de Internet sem-fio. O sistema é parecido com um weblogin
+muito comum em hospitisl e cafés, porém ao invés de obter acesso por login/senha, o cliente só será aceito na rede
+após a realização do pagamento de um valor estipulado.
 Forneceremos como funcionará a comunicação, os trâmites das transações e como o roteador gerencia quais clientes
 terão acesso à rede e por quanto tempo. Também elaboraremos um simples método para se calcular o custo total
 de uso da rede que se baseia na capacidade total da rede no momento e de suas características, como largura de banda e
-número de usuários ativos.
+número de usuários.
 
 \section{Metodologia}\label{sec:Metodology}
 
-pass
+\subsection{Visão Geral}
+
+Quando um cliente descobre que há uma rede IOTA Wifi disponível ele se conecta a ela. A rede Wifi deve ser aberta para todos
+para que, ao se conectar, o cliente adquira um endereço IP na mesma faixa do roteador e assim um possível canal de
+comunicação seja formado. O cliente está conectado na rede mas seu acesso não está liberado -- se ele tentar abrir alguma
+página Web, ele seja direcionado para a página de informações sobre o pagamento em IOTA, e nessa página, o cliente recebe
+o endereço IOTA do roteador e será avisado que o acesso à Internet só será liberado após o pagamento da quantia especificada.
+
+O cliente procede com a transação utilizando a sua carteira IOTA e quase instantaneamente o roteador reconhece o pagamento e,
+sem seguida, libera o endereço MAC do cliente para acesso.
+
+\subsection{Configuração do roteador}
+
+O roteador possui sua carteira IOTA, como também scripts para aceitar e rejeitar novos clientes. O roteador é livre para usar
+somente um endereço IOTA fixo ou variável, pois esse endereço é mostrado na página Web inicial. A liberação do cliente é feita ao
+inserir o endereço MAC do cliente, obtido na mensagem da comunicação, em um arquivo de whitelist. Todo e qualquer cliente, inicialmente,
+está em blacklist, e somente clientes que já pagaram o acesso estão em whitelist.
+
+\subsection{Configuração do cliente}
 
 \section{Resultados}\label{sec:Output}
 
 pass
+
+\section{Futuras melhorias}\label{sec:Future}
+
+Uma lista de futuras melhorias para o sistema.
+
+\begin{enumerate}
+\item Retirar a página Web inicial e pesquisar por métodos de comunicação pré-conexão.
+Seria necessário trabalhar em um novo protocolo de comunicação.
+\item O roteador estipular um tempo máximo de conexão para o cliente ou estipular ``planos'' envolvendo preços
+por tempo de uso.
+\item O cliente anunciar para outros aparelhos -- em troca de IOTAs -- que há uma rede de bom custo benefício
+de disponível. Seria necessário trabalhar em um novo protocolo de comunicação, como no item 1.
+\end{enumerate}
 
 \section{Conclusão}
 pass
