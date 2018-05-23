@@ -3,6 +3,8 @@
 from uuid import getnode as get_mac
 from iota import Iota, ProposedTransaction, ProposedBundle, Address, Tag, TryteString
 
+#https://iota.readme.io/v1/reference#findtransactions
+
 #import json
 import sys
 
