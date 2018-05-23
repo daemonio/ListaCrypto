@@ -32,7 +32,7 @@ class MyIOTA:
         else:
             return None
 
-    def get_addr(self, n):
+    def get_addr_list(self, n):
         addr_list = []
 
         if n < 1:
@@ -48,9 +48,9 @@ class MyIOTA:
 
         return addr_list
 
-    def get_balance(self, addr):
+    def get_addr_balance(self, addr):
         # TODO: addr is a list with just one element
-        result = self.api.get_balances(addr)
+        result = self.api.get_balances([addr])
 
         balance = result['balances']
 
@@ -58,12 +58,12 @@ class MyIOTA:
 
     def get_first_addr_with_fund(self, fund, n):
         for i in range(1, n+1):
-            addr = self.get_addr(i)
+            addr_list = self.get_addr_list(i)
 
-            b = self.get_balance(addr)
+            b = self.get_addr_balance(addr_list[i])
 
             if b > fund:
-                return (i, addr[0], b)
+                return (i, addr, b)
 
         return (None, None, None)
 
@@ -81,6 +81,12 @@ class MyIOTA:
         self.transfers.append((txn, True))
 
         return len(self.transfers)
+
+    def get_transfers(self, addr):
+        #return self.api.get_transfers(None)
+        #return self.api.get_account_data(None)
+        print self.api.findTransactions.__doc__
+        return self.api.findTransactions(addresses = [addr]) 
 
     def _send_transfer(self, transfer, source_addr):
         api = Iota(iota_node, seed)
@@ -101,15 +107,28 @@ class MyIOTA:
     def send_all_transfers(self):
         pass
 
-SEED = 'WSHQRZICNFQUQPAPYWKFPWKTWWBPQNMTDNBYSGFZURGBWONDQEBPLNUXJVQTPYNFJKKTFATIVJTBSAWUX'
+#SEED = 'WSHQRZICNFQUQPAPYWKFPWKTWWBPQNMTDNBYSGFZURGBWONDQEBPLNUXJVQTPYNFJKKTFATIVJTBSAWUX'
+SEED = '9ZWG9PYDMWDPUZ9LOXZPIYCKZFOBAOEFPDYZXGHOXTLV9DWYFSBREURIMWPZMJZWV9RHUPUAQTBKXTIAN'
 iota = MyIOTA('http://localhost:14265', SEED)
-
+MYADDR = 'BWRZYUPYRDOZDGRVINNEUTRFSTQN9MWTDDYASLEXI9IAH9BTFDCFAMFVCAMTEROJHTRTMDMSMH9XHNSYXLWNNJMTDA'
 iota.update()
 
-print iota.get_node_info()
-#rint iota.get_balance(iota.get_addr(1))
+#print iota.get_node_info()
+#print '----------------'
+#print
 
-print iota.get_addr_with_balance(100, 5)
+#print iota.get_addr_list(10)
+#print dir(api)
+print iota.get_addr_balance(MYADDR)
+# Search the first 5 address and returns the first address with > 100 of fund.
+#print iota.get_first_addr_with_fund(100, 5)
+
+t = iota.get_transfers(MYADDR)
+
+print t
+
+sys.exit()
+
 
 ADDR1='UXIKPLHDHSNTTVTMGP9RNK9CVRHXRNFFZVTPGPHVTZMOTT9TMINEVNZHVMRJEEWCNSZYNNNITFKSSJUOCTND9VVDQD'
 ADDR2='JUKTBTLFOITZWWLXNYENXLUCZKMAUAFXXRQRHDMNQQWGEWTGKALMXKCZWMPZWBKSVPJPMFQYPYGKEQYFAULGMOR9NA'
@@ -123,7 +142,8 @@ iota.prepare_transfer(ADDR3, 666, 'msg', 'tag')
 iota.prepare_transfer(ADDR4, 666, 'msg', 'tag')
 iota.prepare_transfer(ADDR5, 666, 'msg', 'tag')
 
-iota.send_all_transfers()
+#iota.send_all_transfers()
+
 sys.exit()
 
 #from iota import Iota
@@ -137,6 +157,7 @@ sys.exit()
 #MACADDR = ':'.join(("%012X" % mac)[i:i+2] for i in range(0, 12, 2))
 
 SEED = '9ZWG9PYDMWDPUZ9LOXZPIYCKZFOBAOEFPDYZXGHOXTLV9DWYFSBREURIMWPZMJZWV9RHUPUAQTBKXTIAN'
+MYADDR = 'BWRZYUPYRDOZDGRVINNEUTRFSTQN9MWTDDYASLEXI9IAH9BTFDCFAMFVCAMTEROJHTRTMDMSMH9XHNSYXLWNNJMTDA'
 api = Iota('http://localhost:14265',seed = SEED)
 
 print api.get_node_info()
@@ -145,7 +166,7 @@ print
 
 #print dir(api)
 
-api.get_balances(SEED)
+print api.get_balances(SEED)
 
 sys.exit(0)
 
