@@ -95,23 +95,11 @@ class MyIOTA:
     def send_transfer(self, addr, index):
         pass
 
+    def confirm_transactions(self):
+        pass
+
     def send_all_transfers(self):
-        sent_one = False
-
-        transfers_bkp = self.transfers[:]
-        for t in self.transfers:
-            (addr, value, is_new_transaction) = (t[0].address, t[0].value, t[1])
-
-            if is_new_transaction:
-                print 'Sending {0} iotas to {1}...{2}'.format(t[0].value, \
-                        t[0].address[:5], t[0].address[75:])
-
-                sent_one = True
-
-            transfers_bkp.append((t[0], False))
-
-        if sent_one:
-            self.transfers = transfers_bkp
+        pass
 
 SEED = 'WSHQRZICNFQUQPAPYWKFPWKTWWBPQNMTDNBYSGFZURGBWONDQEBPLNUXJVQTPYNFJKKTFATIVJTBSAWUX'
 iota = MyIOTA('http://localhost:14265', SEED)
@@ -129,11 +117,11 @@ ADDR3='TQWYFTFBGQSZZQ9AWWCAMYGC9TYNTJXOPAZIPUDSMRKLWCPTPZKGN9NSPKWXSHTATBTPMDHIH
 ADDR4='J9VGDTX9FSRTGSG9SHGEFDNQZUIB99XHJRGRRKBOBFEEBRKTNPANQKYYPXZSAIOMGLKBKVHJTVLPSOQZWCWPJVAND9'
 ADDR5='PYZYINKAYUXGQUCATBHXUNLPZRNOZHHQZYLGICPNLZAMXGVXTT9JNCYYYTPWQPYLXFIAKULBCCGMPDQEYZSWQFDGOX'
 
-iota.prepare_transfer(ADDR1, 100, 'msg', 'tag')
-iota.prepare_transfer(ADDR2, 100, 'msg', 'tag')
-iota.prepare_transfer(ADDR3, 100, 'msg', 'tag')
-iota.prepare_transfer(ADDR4, 100, 'msg', 'tag')
-iota.prepare_transfer(ADDR5, 100, 'msg', 'tag')
+iota.prepare_transfer(ADDR1, 666, 'msg', 'tag')
+iota.prepare_transfer(ADDR2, 666, 'msg', 'tag')
+iota.prepare_transfer(ADDR3, 666, 'msg', 'tag')
+iota.prepare_transfer(ADDR4, 666, 'msg', 'tag')
+iota.prepare_transfer(ADDR5, 666, 'msg', 'tag')
 
 iota.send_all_transfers()
 sys.exit()
