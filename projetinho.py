@@ -1,9 +1,7 @@
 #!/usr/bin/env python2.7
 
 from uuid import getnode as get_mac
-from iota import Iota, ProposedTransaction, ProposedBundle, Address, Tag, TryteString
-
-#https://iota.readme.io/v1/reference#findtransactions
+from iota import Iota, ProposedTransaction, ProposedBundle, Address, Tag, TryteString, Transaction
 
 #import json
 import sys
@@ -15,24 +13,14 @@ class MyIOTA:
         self.api = False
         self._update = False
         self.transfers = []
-        pass
+
+        self.api = Iota(self.node, self.seed)
 
     def debug(self, msg, debug = False):
         print msg
 
-    def update(self, _debug = False):
-        self._update = True
-        self.api = Iota(self.node, self.seed)
-
-    def is_updated(self):
-        return self._update
-
     def get_node_info(self):
-        if self.is_updated():
-            #return json.dumps(self.api.get_node_info(), indent = 4)
-            return self.api.get_node_info()
-        else:
-            return None
+        self.api.get_node_info()
 
     def get_addr_list(self, n):
         addr_list = []
@@ -84,11 +72,14 @@ class MyIOTA:
 
         return len(self.transfers)
 
-    def get_transfers(self, addr):
-        #return self.api.get_transfers(None)
-        #return self.api.get_account_data(None)
-        print self.api.findTransactions.__doc__
-        return self.api.findTransactions(addresses = [addr]) 
+    def get_transfers_hashes_by_addr_list(self, addrl):
+        return self.api.findTransactions(addresses = addrl)['hashes']
+
+    def get_bundle(self, trans):
+        return self.api.getBundles(transaction = trans)
+
+    def get_latest_inclusion(self, addrl):
+        return self.api.get_latest_inclusion(hashes = addrl)
 
     def _send_transfer(self, transfer, source_addr):
         api = Iota(iota_node, seed)
@@ -109,85 +100,91 @@ class MyIOTA:
     def send_all_transfers(self):
         pass
 
-#SEED = 'WSHQRZICNFQUQPAPYWKFPWKTWWBPQNMTDNBYSGFZURGBWONDQEBPLNUXJVQTPYNFJKKTFATIVJTBSAWUX'
-SEED = '9ZWG9PYDMWDPUZ9LOXZPIYCKZFOBAOEFPDYZXGHOXTLV9DWYFSBREURIMWPZMJZWV9RHUPUAQTBKXTIAN'
+    def get_trytes(self, hashl):
+        return self.api.get_trytes(hashl)['trytes'][0]
+
+    def get_transaction_from_trytes(self, trytes):
+        txn = Transaction.from_tryte_string(trytes)
+
+        return txn
+
+    def get_transaction_fields(self, txn):
+        #txn = Transaction.from_tryte_string(trytes)
+
+        confirmed = str(txn.is_confirmed)
+        timestamp = str(txn.timestamp)
+        address   = str(txn.address)
+        value     = str(txn.value)
+        tag       = str(txn.tag)
+
+        return (confirmed, timestamp, address, value, tag)
+
+    #
+    # "META" functions. Only used for tests.
+    #
+    def meta_check_if_got_paid(self, transactions_hashes, my_addr, value):
+        # TODO: iterativo
+        trytes = iota.get_trytes(transactions_hashes)
+        txn = iota.get_transaction_from_trytes(trytes)
+
+        (_, _, addr_t, value_t, _) = iota.get_transaction_fields(txn)
+
+        if addr_t == my_addr and value_t == value:
+            return True
+
+        return False
+
+        #print address, my_addr, value
+
+
+#
+# Main
+#
+SEED   = 'WXBTI9EVKNBEMBWMQUVOKALPQZGURKXQUUOZMGLIPIPU99RCYSPPIOQN9SJSPTDZVIIXKPRJQIVQARINL'
+MYADDR = 'UXIKPLHDHSNTTVTMGP9RNK9CVRHXRNFFZVTPGPHVTZMOTT9TMINEVNZHVMRJEEWCNSZYNNNITFKSSJUOCTND9VVDQD'
+
 iota = MyIOTA('http://localhost:14265', SEED)
-MYADDR = 'BWRZYUPYRDOZDGRVINNEUTRFSTQN9MWTDDYASLEXI9IAH9BTFDCFAMFVCAMTEROJHTRTMDMSMH9XHNSYXLWNNJMTDA'
-iota.update()
+iota.get_addr_balance(MYADDR)
 
-#print iota.get_node_info()
-#print '----------------'
-#print
+hashes = iota.get_transfers_hashes_by_addr_list([MYADDR])
 
-#print iota.get_addr_list(10)
-#print dir(api)
-print iota.get_addr_balance(MYADDR)
-# Search the first 5 address and returns the first address with > 100 of fund.
-#print iota.get_first_addr_with_fund(100, 5)
-
-t = iota.get_transfers(MYADDR)
-
-print t
-
-sys.exit()
-
-
-ADDR1='UXIKPLHDHSNTTVTMGP9RNK9CVRHXRNFFZVTPGPHVTZMOTT9TMINEVNZHVMRJEEWCNSZYNNNITFKSSJUOCTND9VVDQD'
-ADDR2='JUKTBTLFOITZWWLXNYENXLUCZKMAUAFXXRQRHDMNQQWGEWTGKALMXKCZWMPZWBKSVPJPMFQYPYGKEQYFAULGMOR9NA'
-ADDR3='TQWYFTFBGQSZZQ9AWWCAMYGC9TYNTJXOPAZIPUDSMRKLWCPTPZKGN9NSPKWXSHTATBTPMDHIHCAHIYDL9BBJIQIWEX'
-ADDR4='J9VGDTX9FSRTGSG9SHGEFDNQZUIB99XHJRGRRKBOBFEEBRKTNPANQKYYPXZSAIOMGLKBKVHJTVLPSOQZWCWPJVAND9'
-ADDR5='PYZYINKAYUXGQUCATBHXUNLPZRNOZHHQZYLGICPNLZAMXGVXTT9JNCYYYTPWQPYLXFIAKULBCCGMPDQEYZSWQFDGOX'
-
-iota.prepare_transfer(ADDR1, 666, 'msg', 'tag')
-iota.prepare_transfer(ADDR2, 666, 'msg', 'tag')
-iota.prepare_transfer(ADDR3, 666, 'msg', 'tag')
-iota.prepare_transfer(ADDR4, 666, 'msg', 'tag')
-iota.prepare_transfer(ADDR5, 666, 'msg', 'tag')
-
-#iota.send_all_transfers()
-
-sys.exit()
-
-#from iota import Iota
-# Generate a random seed.
-#api = Iota('http://localhost:14265')
-# Specify seed.
-#api = Iota('http://localhost:14265', SEED)
-#print(api.get_node_info())
-
-#mac = get_mac()
-#MACADDR = ':'.join(("%012X" % mac)[i:i+2] for i in range(0, 12, 2))
-
-SEED = '9ZWG9PYDMWDPUZ9LOXZPIYCKZFOBAOEFPDYZXGHOXTLV9DWYFSBREURIMWPZMJZWV9RHUPUAQTBKXTIAN'
-MYADDR = 'BWRZYUPYRDOZDGRVINNEUTRFSTQN9MWTDDYASLEXI9IAH9BTFDCFAMFVCAMTEROJHTRTMDMSMH9XHNSYXLWNNJMTDA'
-api = Iota('http://localhost:14265',seed = SEED)
-
-print api.get_node_info()
-print '----------------'
-print
-
-#print dir(api)
-
-print api.get_balances(SEED)
+iota.meta_get_paid(hashes, MYADDR, 100)
 
 sys.exit(0)
 
-output = ProposedTransaction(
-    # receiving address of the transfer
-    address = Address(ADDR),
+trytes = iota.get_trytes(hashes)
 
-    # Amount of Iota you want to send
-    value = 1,
+txn = iota.get_transaction_from_trytes(trytes)
 
-    # Optional Tag (27-trytes)
-    tag = Tag(b'HELLO9WORLD'),
+print iota.get_transaction_fields(txn)
 
-    # Message (2187-trytes)
-    message = TryteString.from_string('Hello world!')
-    )
+#timestamp = str(txn.timestamp)
+#tag = str(txn.tag)
+#address = str(txn.address)
+#confirmed = str(txn.is_confirmed)
+#value = str(txn.value)
 
-bundle = ProposedBundle()
+#print dir(txn)
+#print timestamp, tag, address, confirmed, value
 
-bundle.add_transaction(output)
 
-prepared_bundle = api.prepare_transfer(bundle)
+
+#gt_result = api.get_trytes([txn_hash_as_bytes])
+#trytes = str(gt_result['trytes'][0])
+#txn = Transaction.from_tryte_string(trytes)
+#timestamp = str(txn.timestamp)
+#tag = str(txn.tag)
+#address = str(txn.address)
+#short_transaction_id = short_t_id_start_idx
+
+#b = iota.get_bundle('BLGTNPDL9SYOQRKESABEAXIEILQKSFTOKPMR9DCSUAKWDTOBROTCY9SRHUWSRZCXFPHDJXCRCNNUZ9999')
+#b = iota.get_bundle('OEKNZ9OYAIXRZTZ9AFXNBCPG9DCFPPMMNSEPCTOMDELIZUJAARLAUWVTXZEZDOZRTHCQBOVHSOXT99999')['transaction_hash']
+#print b
+
+
+
+
+#t = iota.get_transfers_hashes_by_addr_list([MYADDR])
+#t = t['hashes']
+#print iota.get_latest_inclusion(t)['states']
+
