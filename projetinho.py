@@ -7,7 +7,7 @@ from iota import Iota, ProposedTransaction, ProposedBundle, Address, Tag, TryteS
 import sys
 
 class MyIOTA:
-    def __init__(self, node, seed, transferfile = False):
+    def __init__(self, node, seed):
         self.node = node
         self.seed = seed
         self.api = False
@@ -34,8 +34,9 @@ class MyIOTA:
         for i in range(n):
             addr = addresses[i]
 
-            addr_list.append(str(addr))
+            addr_list.append(addr)
 
+        # returns list of IOTA Address objects.
         return addr_list
 
     def get_addr_balance(self, addr):
@@ -47,10 +48,14 @@ class MyIOTA:
         return (balance[0])
 
     def get_first_addr_with_fund(self, fund, n):
-        for i in range(1, n+1):
+        for i in range(1, n):
             addr_list = self.get_addr_list(i)
 
-            b = self.get_addr_balance(addr_list[i])
+            # First address is at 1 but indexing is at 0.
+            # Note that addr is type IOTA Address not string.
+            addr = addr_list[i-1]
+
+            b = self.get_addr_balance(addr)
 
             if b > fund:
                 return (i, addr, b)
@@ -60,17 +65,19 @@ class MyIOTA:
     def prepare_transfer(self, dest_addr, transfer_value, msg, tag):
         # TODO: verify address (checksum)
         # TODO: use mi, gi, etc
-        msg = msg.upper()
-        tag = tag.upper()
+        #msg = msg.upper()
+        #tag = tag.upper()
+
+        print '------------', TryteString.from_string(msg)
+        #message=TryteString.from_string(msg),
+
         txn = ProposedTransaction(address=Address(dest_addr),
-                message=TryteString.from_string(msg),
+                message='AAAAAAAAAAAAAAa',
                 tag=Tag(tag),
                 value=transfer_value,
                 )
 
-        self.transfers.append((txn, True))
-
-        return len(self.transfers)
+        return txn
 
     def get_transfers_hashes_by_addr_list(self, addrl):
         return self.api.findTransactions(addresses = addrl)['hashes']
@@ -109,29 +116,31 @@ class MyIOTA:
         return txn
 
     def get_transaction_fields(self, txn):
-        #txn = Transaction.from_tryte_string(trytes)
+        print dir(txn)
 
         confirmed = str(txn.is_confirmed)
         timestamp = str(txn.timestamp)
         address   = str(txn.address)
         value     = str(txn.value)
+        #message   = str(txn.signature_message_fragment)
+        message   = str(txn.message)
         tag       = str(txn.tag)
 
-        return (confirmed, timestamp, address, value, tag)
+        return (confirmed, timestamp, address, value, tag, message)
 
     def get_values_of_transactions(self, transactions_hashes, my_addr):
-        # TODO: iterativo
-        trytes = iota.get_trytes(transactions_hashes)
-        txn = iota.get_transaction_from_trytes(trytes)
+        txn_tuples = []
 
-        (_, _, addr_t, value_t, _) = iota.get_transaction_fields(txn)
+        for h in transactions_hashes:
+            pass
+            trytes = iota.get_trytes(transactions_hashes)
+            txn = iota.get_transaction_from_trytes(trytes)
 
-        # Calcular checksum
+            (_, _, addr_t, value_t, msg_t, _) = iota.get_transaction_fields(txn)
 
-        #if addr_t == my_addr:
-        return value_t
+            txn_tuples.append((addr_t, value_t, msg_t))
 
-        return False
+        return txn_tuples
 
 def my_assert(condition, msg):
     if not condition:
@@ -142,9 +151,19 @@ def my_assert(condition, msg):
 # Main
 #
 SEED   = 'WXBTI9EVKNBEMBWMQUVOKALPQZGURKXQUUOZMGLIPIPU99RCYSPPIOQN9SJSPTDZVIIXKPRJQIVQARINL'
-MYADDR = 'UXIKPLHDHSNTTVTMGP9RNK9CVRHXRNFFZVTPGPHVTZMOTT9TMINEVNZHVMRJEEWCNSZYNNNITFKSSJUOCTND9VVDQD'
+MYADDR = Address('UXIKPLHDHSNTTVTMGP9RNK9CVRHXRNFFZVTPGPHVTZMOTT9TMINEVNZHVMRJEEWCNSZYNNNITFKSSJUOCTND9VVDQD')
+DESTADDR = Address('QXMWVWPOEOBDCBZYMDXUBI9NKZOGQYCBSUAOLWJYHFACTIBMLYRSNQNSGTNNB9WZBMMU9HPYLOAYATWDDBZIWBAWPW')
 
 iota = MyIOTA('http://localhost:14265', SEED)
+
+txn = iota.prepare_transfer(DESTADDR, 100, 'LMAO' , 'LMAO')
+
+print iota.get_transaction_fields(txn)
+
+sys.exit()
+
+(_, MYADDR, _) = iota.get_first_addr_with_fund(10, 10)
+
 print iota.get_addr_balance(MYADDR)
 
 hashes = iota.get_transfers_hashes_by_addr_list([MYADDR])
