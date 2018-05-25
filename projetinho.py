@@ -119,23 +119,24 @@ class MyIOTA:
 
         return (confirmed, timestamp, address, value, tag)
 
-    #
-    # "META" functions. Only used for tests.
-    #
-    def meta_check_if_got_paid(self, transactions_hashes, my_addr, value):
+    def get_values_of_transactions(self, transactions_hashes, my_addr):
         # TODO: iterativo
         trytes = iota.get_trytes(transactions_hashes)
         txn = iota.get_transaction_from_trytes(trytes)
 
         (_, _, addr_t, value_t, _) = iota.get_transaction_fields(txn)
 
-        if addr_t == my_addr and value_t == value:
-            return True
+        # Calcular checksum
+
+        #if addr_t == my_addr:
+        return value_t
 
         return False
 
-        #print address, my_addr, value
-
+def my_assert(condition, msg):
+    if not condition:
+        print 'Error: ', msg
+        sys.exit(-1)
 
 #
 # Main
@@ -144,47 +145,10 @@ SEED   = 'WXBTI9EVKNBEMBWMQUVOKALPQZGURKXQUUOZMGLIPIPU99RCYSPPIOQN9SJSPTDZVIIXKP
 MYADDR = 'UXIKPLHDHSNTTVTMGP9RNK9CVRHXRNFFZVTPGPHVTZMOTT9TMINEVNZHVMRJEEWCNSZYNNNITFKSSJUOCTND9VVDQD'
 
 iota = MyIOTA('http://localhost:14265', SEED)
-iota.get_addr_balance(MYADDR)
+print iota.get_addr_balance(MYADDR)
 
 hashes = iota.get_transfers_hashes_by_addr_list([MYADDR])
 
-iota.meta_get_paid(hashes, MYADDR, 100)
+my_assert(len(hashes) > 0, 'Nao existe transferencia associada ao endereco passado.')
 
-sys.exit(0)
-
-trytes = iota.get_trytes(hashes)
-
-txn = iota.get_transaction_from_trytes(trytes)
-
-print iota.get_transaction_fields(txn)
-
-#timestamp = str(txn.timestamp)
-#tag = str(txn.tag)
-#address = str(txn.address)
-#confirmed = str(txn.is_confirmed)
-#value = str(txn.value)
-
-#print dir(txn)
-#print timestamp, tag, address, confirmed, value
-
-
-
-#gt_result = api.get_trytes([txn_hash_as_bytes])
-#trytes = str(gt_result['trytes'][0])
-#txn = Transaction.from_tryte_string(trytes)
-#timestamp = str(txn.timestamp)
-#tag = str(txn.tag)
-#address = str(txn.address)
-#short_transaction_id = short_t_id_start_idx
-
-#b = iota.get_bundle('BLGTNPDL9SYOQRKESABEAXIEILQKSFTOKPMR9DCSUAKWDTOBROTCY9SRHUWSRZCXFPHDJXCRCNNUZ9999')
-#b = iota.get_bundle('OEKNZ9OYAIXRZTZ9AFXNBCPG9DCFPPMMNSEPCTOMDELIZUJAARLAUWVTXZEZDOZRTHCQBOVHSOXT99999')['transaction_hash']
-#print b
-
-
-
-
-#t = iota.get_transfers_hashes_by_addr_list([MYADDR])
-#t = t['hashes']
-#print iota.get_latest_inclusion(t)['states']
-
+print iota.get_values_of_transactions(hashes, MYADDR)
