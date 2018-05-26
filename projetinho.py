@@ -160,7 +160,7 @@ class MyIOTA:
             (_, _, addr_t, value_t, tag_t, msg_t) = iota.get_transaction_fields(txn)
 
             #txn_tuples.append((addr_t, value_t, tag_t, msg_t))
-            txn_tuples.append((addr_t, msg_t))
+            txn_tuples.append((tag_t, msg_t))
 
         return txn_tuples
 
@@ -211,6 +211,8 @@ def get_transactions_as_file_buffer(filename, value, bufsize, dest_addr):
         txn = iota.prepare_transfer(dest_addr, value, TAG, msg)
         txn_list.append(txn)
 
+        index += 1
+
     return txn_list
 
 
@@ -224,11 +226,12 @@ iota.setDebug(True)
 
 txn_list = get_transactions_as_file_buffer('teste.txt', 0, 100, DESTADDR)
 
-txn_list = iota.get_transfers_hashes_by_addr_list([DESTADDR])
+file = []
 
-for (addr, msg) in iota.get_values_of_transactions(txn_list):
+txn_list = iota.get_transfers_hashes_by_addr_list([DESTADDR])
+for (tag, msg) in iota.get_values_of_transactions(txn_list):
+    print TryteString.as_string(TryteString(tag))
     print TryteString.as_string(TryteString(msg))
-    #print msg
 
 print dir(TryteString)
 
