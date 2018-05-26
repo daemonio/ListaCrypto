@@ -13,11 +13,18 @@ class MyIOTA:
         self.api = False
         self._update = False
         self.transfers = []
+        self._debug = False
+
+        self.min_weight_magnitude = 14
 
         self.api = Iota(self.node, self.seed)
 
-    def debug(self, msg, debug = False):
-        print msg
+    def setDebug(self, flag = False):
+        self._debug = flag
+
+    def debug(self, msg):
+        if self._debug:
+            print msg
 
     def get_node_info(self):
         self.api.get_node_info()
@@ -47,8 +54,28 @@ class MyIOTA:
 
         return (balance[0])
 
-    def get_first_addr_with_fund(self, fund, n):
-        for i in range(1, n):
+#    def get_first_addr_with_fund(self, fund, n):
+#        for i in range(1, n):
+#            addr_list = self.get_addr_list(i)
+#
+#            # First address is at 1 but indexing is at 0.
+#            # Note that addr is type IOTA Address not string.
+#            addr = addr_list[i-1]
+#
+#            b = self.get_addr_balance(addr)
+#
+#            if b > fund:
+#                return (i, addr, b)
+#
+#        return (None, None, None)
+
+    def attach_tangle(self, n, start_index = 1):
+        # n is the number of address to attach. It starts with 1
+        addr_and_value_list = []
+
+        iota.debug('Attaching {0} addresses. Please wait...'.format(n))
+
+        for i in range(start_index, n):
             addr_list = self.get_addr_list(i)
 
             # First address is at 1 but indexing is at 0.
@@ -57,22 +84,20 @@ class MyIOTA:
 
             b = self.get_addr_balance(addr)
 
-            if b > fund:
-                return (i, addr, b)
+            addr_and_value_list.append((addr, i, b))
 
-        return (None, None, None)
+        return addr_and_value_list
 
-    def prepare_transfer(self, dest_addr, transfer_value, msg, tag):
+    def prepare_transfer(self, dest_addr, transfer_value, tag, msg):
         # TODO: verify address (checksum)
         # TODO: use mi, gi, etc
-        #msg = msg.upper()
-        #tag = tag.upper()
+        msg = TryteString.from_string(msg)
 
-        print '------------', TryteString.from_string(msg)
+        #print '------------', TryteString.from_string(msg)
         #message=TryteString.from_string(msg),
 
         txn = ProposedTransaction(address=Address(dest_addr),
-                message='AAAAAAAAAAAAAAa',
+                message=msg,
                 tag=Tag(tag),
                 value=transfer_value,
                 )
@@ -88,18 +113,15 @@ class MyIOTA:
     def get_latest_inclusion(self, addrl):
         return self.api.get_latest_inclusion(hashes = addrl)
 
-    def _send_transfer(self, transfer, source_addr):
-        api = Iota(iota_node, seed)
-        api.send_transfer(
-                inputs=get_inputs(),
-                depth=7,
-                transfers=prepared_transferes,
-                change_address=change_addy,
-                min_weight_magnitude=settings[0]['min_weight_magnitude']
-                )
+    def send_transfer(self, prepared_transfers, zero_value = False):
+        iota.debug('Sending {0} transactions, please wait...'.format(len(prepared_transfers)))
 
-    def send_transfer(self, addr, index):
-        pass
+        self.api.send_transfer(
+                inputs=iota.get_inputs(zero_value),
+                depth=7,
+                transfers=prepared_transfers,
+                #change_address=change_addy,
+                min_weight_magnitude=self.min_weight_magnitude)
 
     def confirm_transactions(self):
         pass
@@ -116,58 +138,104 @@ class MyIOTA:
         return txn
 
     def get_transaction_fields(self, txn):
-        print dir(txn)
+        #print dir(txn)
 
         confirmed = str(txn.is_confirmed)
         timestamp = str(txn.timestamp)
         address   = str(txn.address)
         value     = str(txn.value)
-        #message   = str(txn.signature_message_fragment)
-        message   = str(txn.message)
+        message   = str(txn.signature_message_fragment)
+        #message   = str(txn.message)
         tag       = str(txn.tag)
 
         return (confirmed, timestamp, address, value, tag, message)
 
-    def get_values_of_transactions(self, transactions_hashes, my_addr):
+    def get_values_of_transactions(self, transactions_hashes):
         txn_tuples = []
 
         for h in transactions_hashes:
-            pass
-            trytes = iota.get_trytes(transactions_hashes)
+            trytes = iota.get_trytes([h])
             txn = iota.get_transaction_from_trytes(trytes)
 
-            (_, _, addr_t, value_t, msg_t, _) = iota.get_transaction_fields(txn)
+            (_, _, addr_t, value_t, tag_t, msg_t) = iota.get_transaction_fields(txn)
 
-            txn_tuples.append((addr_t, value_t, msg_t))
+            #txn_tuples.append((addr_t, value_t, tag_t, msg_t))
+            txn_tuples.append((addr_t, msg_t))
 
         return txn_tuples
+
+    def get_inputs(self, addr_list, zero_value = False):
+        # Transactions with zero value, just return the first address.
+        if zero_value:
+            addr, index, _ = addr_list[0]
+            return Address(address, key_index = index, security_level = 2)
 
 def my_assert(condition, msg):
     if not condition:
         print 'Error: ', msg
         sys.exit(-1)
 
-#
-# Main
-#
+def get_buffer_from_file(filename, bufsize):
+    f = open(filename, 'r')
+
+    buf = []
+    
+    for line in f:
+        line = line.rstrip('\n')
+
+        i = 0
+        while i < len(line):
+            if bufsize < len(line):
+                j = bufsize
+            else:
+                j = len(line)
+
+            buf.append(line[i:i+j])
+
+            i = i + j
+
+    return buf
+    f.close()
+
+def get_transactions_as_file_buffer(filename, value, bufsize, dest_addr):
+    txn_list = []
+    index = 0
+
+    buffer_msg = get_buffer_from_file(filename, bufsize)
+    l = len(buffer_msg)
+
+    for msg in buffer_msg:
+        TAG = '{0}|{1}|{2}'.format(filename, index, l)
+        TAG = TryteString.from_string(TAG)
+
+        txn = iota.prepare_transfer(dest_addr, value, TAG, msg)
+        txn_list.append(txn)
+
+    return txn_list
+
+
 SEED   = 'WXBTI9EVKNBEMBWMQUVOKALPQZGURKXQUUOZMGLIPIPU99RCYSPPIOQN9SJSPTDZVIIXKPRJQIVQARINL'
-MYADDR = Address('UXIKPLHDHSNTTVTMGP9RNK9CVRHXRNFFZVTPGPHVTZMOTT9TMINEVNZHVMRJEEWCNSZYNNNITFKSSJUOCTND9VVDQD')
-DESTADDR = Address('QXMWVWPOEOBDCBZYMDXUBI9NKZOGQYCBSUAOLWJYHFACTIBMLYRSNQNSGTNNB9WZBMMU9HPYLOAYATWDDBZIWBAWPW')
+#MYADDR = Address('UXIKPLHDHSNTTVTMGP9RNK9CVRHXRNFFZVTPGPHVTZMOTT9TMINEVNZHVMRJEEWCNSZYNNNITFKSSJUOCTND9VVDQD')
+#DESTADDR = Address('QXMWVWPOEOBDCBZYMDXUBI9NKZOGQYCBSUAOLWJYHFACTIBMLYRSNQNSGTNNB9WZBMMU9HPYLOAYATWDDBZIWBAWPW')
+DESTADDR = Address('AXSJHWXGJMKMOS9LPZSATWDYRPTNVYAELDDWXMGTHOTLGWHRVDVZOBI9IQMELSEMMQKFVSNHYXYUWMZJBLRVJUPWEC')
 
 iota = MyIOTA('http://localhost:14265', SEED)
+iota.setDebug(True)
 
-txn = iota.prepare_transfer(DESTADDR, 100, 'LMAO' , 'LMAO')
+txn_list = get_transactions_as_file_buffer('teste.txt', 0, 100, DESTADDR)
 
-print iota.get_transaction_fields(txn)
+txn_list = iota.get_transfers_hashes_by_addr_list([DESTADDR])
+
+for (addr, msg) in iota.get_values_of_transactions(txn_list):
+    print TryteString.as_string(TryteString(msg))
+    #print msg
+
+print dir(TryteString)
 
 sys.exit()
 
-(_, MYADDR, _) = iota.get_first_addr_with_fund(10, 10)
+# tuple: (address, fund).
+#addr_list = iota.attach_tangle(10, start_index = 1)
 
-print iota.get_addr_balance(MYADDR)
-
-hashes = iota.get_transfers_hashes_by_addr_list([MYADDR])
-
-my_assert(len(hashes) > 0, 'Nao existe transferencia associada ao endereco passado.')
-
-print iota.get_values_of_transactions(hashes, MYADDR)
+#txn_list = get_transactions_as_file_buffer('teste.txt', value = 0, bufsize = 500, dest_addr = DESTADDR)
+#iota.send_transfer(txn_list, zero_value = True)
