@@ -15,8 +15,6 @@
 \usepackage{listings}
 \usepackage{color}
 
-\usepackage{tabularx}
-
 \graphicspath{ {/home/daemonio/} }
 
 \definecolor{dkgreen}{rgb}{0,0.6,0}
@@ -64,6 +62,7 @@ em moedas IOTA para receber a saída de sua tarefa.
 \end{abstract}
 
 \section{Introdução}\label{sec:Introduction}
+
 Toda criptomeda requer três componentes: um protocolo de consenso, uma ``ledger'' distribuída e um contrato inteligente.
 Para o bitcoin, os componentes correspondentes são: proof of work, blockchain e as transações. No caso da Ethereum, as
 componentes são proof of work (e, futuramente, proof of stake), blockchain e scripts em solidity. Porém, nem toda criptomoeda
@@ -108,84 +107,80 @@ nas transações IOTA, garantindo que nenhum endereço de envio será reusado.
 
 Abaixo exemplos comuns da API. Basta seguir passos pré-definidos para enviar e receber IOTAS sem complicações.
 
-\subsection{Criando uma instância}
-\begin{lstlisting}
-iota = MyIOTA('http://localhost:14265', SEED)
-iota.init_wallet()
-\end{lstlisting}
+\subsection{Enviar IOTAS}
+Para exemplificar, a seguir um script para enviar 100 IOTAS para o endereço: UXIKP...VVDQD.
 
-\subsection{Criando Endereços}
 \begin{lstlisting}
+from wallet import MyIOTA
+
+# Set your SEED.
+SEED = 'G9OJZJ...EWTEB'
+
+# Let's create our connection.
+iota = MyIOTA('http://localhost:14265', SEED)
+
+# Init the wallet
+iota.init_wallet()
+
+# Create 10 addresses
 if iota.is_empty_wallet():
     iota.make_addr_list(start_index = 0, n = 10)
-    
+
+# Get fund for the 10 addresses.
 print 'Your total fund is: ', iota.get_total_fund()
-\end{lstlisting}
-    
-Em IOTA você possui vários endereços (um novo a cada transação de saída). É preciso ir no Tangle para obter
-informações dos endereços já utilizados.
 
-\subsection{Enviando IOTA's}
-
-\begin{lstlisting}
-# dest addr
-addr = 'UXI...DQD'
+# Destination addr
+addr = 'UXIKP...VVDQD'
 dest_addr = iota.Address(addr)
 
-# value to transfer
-transfer_value = 100
-\end{lstlisting}
-
-Acima declaramos o endereço destino (que está truncado somente para caber na formatação do documento) e a quantidade de IOTAS.
-
-\begin{lstlisting}
-# inputs & change address (entrada e troco)
+# Get inputs and change_addr
 inputs, change_addr = iota.get_inputs(transfer_value)
 
-# output (the transaction where the IOTA is going to)
-output1 = iota.prepare_transfer(transfer_value, dest_addr, 'TAG', 'MSG')
+# Outputs
+output1 = iota.prepare_transfer(transfer_value, \
+          dest_addr, tag = 'TEST', msg = 'HELLO')
+
+transfer_value = 100
+
+# Send
+iota.send_transfer(transfer_value, inputs, \
+     outputs, change_addr)
 \end{lstlisting}
 
-A primeira linha obtém os \textit{inputs}, que são os endereços com saldo e também o endereço de troco, que é necessário caso valor
-contido nos endereços de \textit{inputs} seja superior ao valor transferido. A segunda linha gera o \textit{output} correspondente.
+\subsection{Receber IOTAS}
+
+Para ``receber'' suas IOTAS, isso é, verificar no tangle o seu saldo total, basta executar ``find\_ transactions()'' e
+verificar se as transações foram confirmadas na rede.
 
 \begin{lstlisting}
-iota.debug('Sending transaction.. please wait.')
+#!/usr/bin/env python2.7
 
-# Send our transaction
-iota.send_transfer(transfer_value, inputs, [output1], change_addr)
-\end{lstlisting}
+from wallet import MyIOTA
 
-\subsection{Recebendo IOTAS}
+# Set your SEED.
+SEED   = 'WXBTI...ARINL'
 
-O início é o mesmo do procedimento de envio. A diferença é que ao invés de chamar \textit{send\_transfer}, nós chamamos \textit{find\_transactions}.
+# Let's create our connection.
+iota = MyIOTA('http://localhost:14265', SEED)
 
-\begin{lstlisting}
-# Get new addressess.
-if iota.is_empty_wallet():
-    iota.make_addr_list(start_index = 0, n = 10)
+iota.init_wallet()
+
+iota.make_addr_list(start_index = 0, n = 10)
 
 print 'Your total fund is: ', iota.get_total_fund()
-\end{lstlisting}
 
-
-\begin{lstlisting}
-# Get new addressess.
-iota.debug('Getting all transactions for the given addresses, please wait...')
 txn_list = iota.find_transactions()
 
 for txn in iota.get_info_transactions(txn_list):
     confirmed_t, addr_t, value_t, tag_t, msg_t = txn
 
-    # Shows only the receveing address & its value.
-    print iota.s_addr(addr_t), value_t
+    if confirmed_t:
+        print addr_t, value_t
 \end{lstlisting}
 
-Por padrão, a função \textit{find\_transactions()} encontra trodas as transações referentes aos endereços da carteira, até mesmo
-as transações não confirmadas. É preciso utilizar o retorno em \textit{confirmed\_t} para verificar se a transação foi confirmada
-ou não.
+Outras funções foram implementadas na MyIOTA. Para ter acesso completo a API, veja: XXXX.
 
-\section{Processamento em Batch}\label{sec:Metodology}
+\section{Metodologia}\label{sec:Metodology}
 
 \subsection{Visão Geral}
 
